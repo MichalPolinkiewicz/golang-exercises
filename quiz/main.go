@@ -81,7 +81,7 @@ func startQuiz(done chan bool) {
 			correctAnswersCounter++
 		}
 	}
-	done <- true
+	close(done)
 }
 
 func countTime(done chan bool, numberOfQuestions *int, timePerQuestion *int) {
@@ -89,13 +89,13 @@ func countTime(done chan bool, numberOfQuestions *int, timePerQuestion *int) {
 	go func(c <-chan time.Time) {
 		<-c
 		gameOver()
-		done <- false
+		close(done)
 	}(ticker.C)
 }
 
 func printQuestion(id *int) {
 	actualQuestion := allQuestions[*id]
-	fmt.Printf("Question %d \n%s = ? \n", *id+1, actualQuestion.text)
+	fmt.Printf("Question %d: %s = ? \n", *id+1, actualQuestion.text)
 }
 
 func isCorrectAnswer(correctAnswer string, userInput *string) bool {
@@ -106,11 +106,11 @@ func isCorrectAnswer(correctAnswer string, userInput *string) bool {
 }
 
 func showScore() {
-	fmt.Println("Your score is", correctAnswersCounter)
+	fmt.Printf("Your score is %d/%d", correctAnswersCounter, numberOfQuestions)
 }
 
 func gameOver() {
-	fmt.Println("Time's end")
+	fmt.Println("Time's end!")
 }
 
 func main() {
