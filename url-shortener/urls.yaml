@@ -1,0 +1,5 @@
+- path: /path1
+  url: aaa
+
+- path: /path2
+  url: bbb
