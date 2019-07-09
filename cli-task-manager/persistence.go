@@ -1,59 +1,146 @@
 package main
 
 import (
-	"github.com/boltdb/bolt"
+	"database/sql"
+	"errors"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 	"log"
+	"os"
 )
 
-var dbService *bolt.DB
+const (
+	errScanningDbRecord    = "error during scanning db record"
+	errQueryExecution      = "error during executing query"
+	errTransactionStart    = "error during starting transaction"
+	errTransactionCommit   = "error during transaction commit"
+	errTransactionRollback = "error during transaction rollback"
+)
+
+var dbInstance *sql.DB
 
 func init() {
-	db, err := bolt.Open("tasks.db", 0600, nil)
+	dbUri := createDbUri()
+	db, err := sql.Open("mysql", dbUri)
 	if err != nil {
-		log.Fatal("error during opening db connection:", err)
+		log.Println("error during opening db connection:", err)
 	}
-	dbService = db
+	dbInstance = db
 }
 
-func save(task *task) error {
-	if err := dbService.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte("tasks2"))
-		if err != nil {
-			log.Println("error during creating bucket")
-		}
-		err = b.Put([]byte(task.description), []byte(task.status))
-		return err
-	}); err != nil {
-		log.Println("error during saving task with description", task.description)
-		return err
+func createDbUri() string {
+	e := godotenv.Load()
+	if e != nil {
+		log.Println("error during loading env file:", e)
 	}
 
-	log.Println("task saved in db")
-	return nil
+	username := os.Getenv("db_user")
+	password := os.Getenv("db_pass")
+	dbName := os.Getenv("db_name")
+	charset := os.Getenv("charset")
+	pt := os.Getenv("parseTime")
+	dbUri := fmt.Sprintf("%s:%s@/%s?charset=%s&parseTime=%s", username, password, dbName, charset, pt)
+
+	return dbUri
+}
+
+func save(t *task) error {
+	tx, err := dbInstance.Begin()
+	if err != nil {
+		log.Println(errTransactionStart, err)
+	}
+
+	_, err = tx.Exec("INSERT INTO tasks (name, description, status) VALUES (?, ?, ?)", t.name, t.description, t.status)
+	if err != nil {
+		log.Println(errQueryExecution, err)
+		if tx.Rollback() != nil {
+			log.Println(errTransactionRollback, err)
+		}
+	}
+
+	if tx.Commit() != nil {
+		log.Println(errTransactionCommit, err)
+	}
+
+	return err
 }
 
 func getAll() []task {
-	var out []task
-	var task task
-
-	if err := dbService.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("tasks2"))
-		log.Println("0")
-		if err := b.ForEach(func(k, v []byte) error {
-			log.Println("1")
-			task.description = string(k)
-			task.status = string(v)
-			log.Println("2")
-			out = append(out, task)
-			log.Println("3")
-			return nil
-		}); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		log.Println("error during creating bolt view", err)
+	rs, err := dbInstance.Query("SELECT * FROM tasks")
+	if err != nil {
+		log.Println(errQueryExecution, err)
 	}
 
-	return out
+	var t task
+	var tasks []task
+	for rs.Next() {
+		err := rs.Scan(&t.id, &t.name, &t.description, &t.status)
+		if err != nil {
+			log.Println(errScanningDbRecord, err)
+		} else {
+			tasks = append(tasks, t)
+		}
+	}
+	return tasks
+}
+
+func getAllByStatus(status *string) []task {
+	rs, err := dbInstance.Query("SELECT * FROM tasks WHERE status = ?", status)
+	if err != nil {
+		log.Println(errQueryExecution, err)
+	}
+
+	var t task
+	var tasks []task
+	for rs.Next() {
+		err := rs.Scan(&t.id, &t.name, &t.description, &t.status)
+		if err != nil {
+			log.Println(errScanningDbRecord, err)
+		} else {
+			tasks = append(tasks, t)
+		}
+	}
+	return tasks
+}
+
+func update(t *task) error {
+	tx, err := dbInstance.Begin()
+	if err != nil {
+		log.Println(errTransactionStart, err)
+	}
+
+	rw, err := tx.Exec("UPDATE tasks SET name = ?, description = ? , status = ? WHERE ID = ?", t.name, t.description, t.status, t.id)
+	if err != nil {
+		log.Println(errQueryExecution, err)
+		if tx.Rollback() != nil {
+			log.Println(errTransactionRollback, err)
+		}
+	}
+
+	if tx.Commit() != nil {
+		log.Println(errTransactionCommit, err)
+	}
+
+	i, err := rw.RowsAffected()
+	if int(i) == 0 || err != nil {
+		err = errors.New(errQueryExecution)
+	}
+	return err
+}
+
+func getById(id *string) task {
+	rs, err := dbInstance.Query("SELECT * FROM tasks WHERE id = ?", id)
+	if err != nil {
+		log.Println(errQueryExecution, err)
+	}
+
+	var t task
+	for rs.Next() {
+		err := rs.Scan(&t.id, &t.name, &t.description, &t.status)
+		if err != nil {
+			log.Println(errScanningDbRecord, err)
+		}
+	}
+	return t
 }

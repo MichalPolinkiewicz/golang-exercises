@@ -6,7 +6,6 @@ import (
 	"github.com/urfave/cli"
 	"log"
 	"os"
-	"strconv"
 )
 
 var (
@@ -14,93 +13,157 @@ var (
 	userInput string
 )
 
+const (
+	errOrnament           = " --------- "
+	errDuringScanning     = errOrnament + "Error during scanning userInput" + errOrnament
+	errDuringTaskCreation = errOrnament + "Error during creating task" + errOrnament
+	errDuringTaskUpdate   = errOrnament + "Error during updating task" + errOrnament
+	errInvalidInput       = errOrnament + "Error - invalid input" + errOrnament
+	errTaskDontExist      = errOrnament + "Error - task with given id don't exists" + errOrnament
+	errNoTasksWithStatus  = errOrnament + "No tasks with given status" + errOrnament
+
+	prefix               = " >> "
+	suffix               = " <<"
+	inputTaskName        = prefix + "Input task name" + suffix
+	inputTaskDescription = prefix + "Input task description" + suffix
+	inputTaskStatus      = prefix + "Input task status" + suffix
+	taskCreated          = prefix + "Task created" + suffix
+	taskUpdated          = prefix + "Task updated" + suffix
+	inputTaskId          = prefix + "Input task id" + suffix
+	editTaskDescription  = prefix + "Edit task description = 1" + suffix
+	editTaskStatus       = prefix + "Edit task status = 2" + suffix
+	chooseStatus         = prefix + "Choose status" + suffix
+	toDoStatus           = prefix + "1 = to do" + suffix
+	inProgressStatus     = prefix + "2 = in progress" + suffix
+	doneStatus           = prefix + "3 = done" + suffix
+)
+
+func readUserInput() error {
+	scanner.Scan()
+	userInput = scanner.Text()
+	if scanner.Err() != nil {
+		log.Println(errDuringScanning, userInput)
+		return scanner.Err()
+	}
+	return nil
+}
+
 func addNewTask(c *cli.Context) {
 	var newTask task
-	fmt.Println("Please input task name")
-	scanner.Scan()
-	newTask.name = scanner.Text()
-	if scanner.Err() != nil {
-		log.Println("error during creating userInput", userInput)
+	fmt.Println(inputTaskName)
+	if readUserInput() != nil {
+		return
 	}
-	fmt.Println("Please input task description")
-	scanner.Scan()
-	newTask.description = scanner.Text()
-	newTask.status = TO_DO
-	if scanner.Err() != nil {
-		log.Println("error during creating userInput", userInput)
-	}
+	newTask.name = userInput
 
-	fmt.Printf("Task '%s' created \n", newTask.name)
-	if err := save(&newTask); err != nil {
-		log.Println(err)
+	fmt.Println(inputTaskDescription)
+	if readUserInput() != nil {
+		return
+	}
+	newTask.description = userInput
+	newTask.status = TO_DO
+
+	if save(&newTask) != nil {
+		fmt.Println(errDuringTaskCreation)
+	} else {
+		fmt.Println(taskCreated)
 	}
 }
 
 func getAllTasks(c *cli.Context) {
 	for _, t := range getAll() {
-		fmt.Printf("TASK_ID: %s, DESCRIPTION: %s, STATUS: %s \n", t.name, t.description, t.status)
+		fmt.Println(t.String())
 	}
 }
 
 func getTasksByStatus(c *cli.Context) {
-	fmt.Printf("Choose valid status: \n1 = %s \n2 = %s \n3 = %s \n", TO_DO, IN_PROGRESS, DONE)
-	scanner.Scan()
-	userInput = scanner.Text()
-
-	isValid := func(status *string) bool {
-		statusAsInt, err := strconv.Atoi(*status)
-		if err != nil {
-			log.Print("error during converting status to int")
-		}
-		if statusAsInt >= 0 && statusAsInt <= 3 {
-			return true
-		}
-		return false
+	fmt.Println(chooseStatus)
+	fmt.Println(toDoStatus)
+	fmt.Println(inProgressStatus)
+	fmt.Println(doneStatus)
+	if readUserInput() != nil {
+		return
 	}
 
-	if isValid(&userInput) {
-
+	s := getConvertedTaskStatus(&userInput)
+	if s == INVALID {
+		return
+	}
+	tasks := getAllByStatus(&s)
+	if len(tasks) > 0 {
+		for _, t := range tasks {
+			fmt.Println(t.String())
+		}
 	} else {
-		fmt.Println("Invalid status")
-		getTasksByStatus(c)
+		fmt.Println(errNoTasksWithStatus)
 	}
 }
 
-func editTask(c *cli.Context) {
-	fmt.Println("Put task name")
-	scanner.Scan()
-	userInput = scanner.Text()
+func updateTask(c *cli.Context) {
+	fmt.Println(inputTaskId)
+	if readUserInput() != nil {
+		return
+	}
 
-	if taskExists() {
-		isValid := func() bool {
-			fmt.Printf("Edit task description = 1\nEdit task status = 2\n")
-			scanner.Scan()
-			userInput = scanner.Text()
-
-			if userInput != "1" && userInput != "2" {
-				fmt.Println("Wrong input")
-				return false
+	task := getById(&userInput)
+	if task.isEmpty() {
+		fmt.Println(errTaskDontExist)
+		return
+	}
+	fmt.Println(editTaskDescription)
+	fmt.Println(editTaskStatus)
+	if readUserInput() != nil {
+		return
+	}
+	if userInput != "1" && userInput != "2" {
+		fmt.Println(errInvalidInput)
+		return
+	} else {
+		switch userInput {
+		case "1":
+			fmt.Println(inputTaskDescription)
+			if readUserInput() != nil {
+				return
 			}
+			task.description = userInput
 
-			fmt.Println("put new text")
-			scanner.Scan()
-			userInput = scanner.Text()
-
-			return true
-		}
-
-		for {
-			if isValid() == false {
-				isValid()
+			if update(&task) != nil {
+				fmt.Println(errDuringTaskUpdate)
 			} else {
-				break
+				fmt.Println(taskUpdated)
 			}
-		}
+			break
 
-		fmt.Print("end")
+		case "2":
+			fmt.Println(inputTaskStatus)
+			if readUserInput() != nil {
+				return
+			}
+			status := getConvertedTaskStatus(&userInput)
+			if status != INVALID {
+				task.status = userInput
+
+				if update(&task) != nil {
+					fmt.Println(errDuringTaskUpdate)
+				} else {
+					fmt.Println(taskUpdated)
+				}
+			}
+			break
+		}
 	}
 }
 
-func taskExists() bool {
-	return true
+func getConvertedTaskStatus(status *string) string {
+	switch *status {
+	case "1":
+		return TO_DO
+	case "2":
+		return IN_PROGRESS
+	case "3":
+		return DONE
+	default:
+		fmt.Println(errInvalidInput)
+		return INVALID
+	}
 }
