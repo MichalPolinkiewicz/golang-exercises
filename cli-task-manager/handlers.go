@@ -141,7 +141,7 @@ func updateTask(c *cli.Context) {
 			}
 			status := getConvertedTaskStatus(&userInput)
 			if status != INVALID {
-				task.status = userInput
+				task.status = status
 
 				if update(&task) != nil {
 					fmt.Println(errDuringTaskUpdate)
