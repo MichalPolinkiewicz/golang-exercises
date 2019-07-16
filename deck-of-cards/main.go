@@ -45,12 +45,10 @@ func New() deck{
 		}
 	}
 	return deck
-
 }
 
 func (d *deck) exclude(f func(s *string) bool) {
 	cards := d.cards
-
 	for i, r := range cards {
 		if f(&r.value) {
 			copy(cards[i:], cards[i+1:])
@@ -58,7 +56,6 @@ func (d *deck) exclude(f func(s *string) bool) {
 			cards = cards[:len(cards)-1]
 		}
 	}
-
 	d.cards = cards
 }
 
