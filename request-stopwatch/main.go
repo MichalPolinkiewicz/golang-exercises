@@ -46,8 +46,7 @@ func fetch(url string, c chan statistics) {
 		c <- statistics{url: url, time: end, status: http.StatusNotFound, readBytes: 0}
 	} else {
 		written, err := io.Copy(ioutil.Discard, resp.Body)
-		err = resp.Body.Close()
-		if err != nil {
+		if err = resp.Body.Close(); err != nil {
 			fmt.Println("error during reading", err.Error())
 		}
 		end := time.Since(start).Seconds()
