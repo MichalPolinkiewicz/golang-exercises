@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/MichalPolinkiewicz/golang-exercises/phone-number-normalizer/persistence"
+	"regexp"
 )
 
 func main() {
@@ -15,15 +16,16 @@ func main() {
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
+	defer persistence.DbInstance.Close()
 
 	numbers := persistence.GetNumbers()
-
 	for _, n := range numbers {
-		normalize(&n)
+		fmt.Println(normalize(n))
 	}
 }
 
-func normalize(number *string){
-	fmt.Println(*number)
+func normalize(phone string) string {
+	re := regexp.MustCompile("\\D")
+	return re.ReplaceAllString(phone, "")
 }
 
