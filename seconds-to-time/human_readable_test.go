@@ -2,16 +2,21 @@ package main
 
 import "testing"
 
-func TestMakeHumanReadable(t *testing.T){
+func TestMakeHumanReadable(t *testing.T) {
 	//given
-	inputSeconds := []int {0, 5, 60, 86399, 359999}
-	expectedResults := []string{"00:00:00", "00:00:05", "00:01:00", "23:59:59", "99:59:59"}
+	testCases := map[int]string{
+		0:      "00:00:00",
+		5:      "00:00:05",
+		60:     "00:01:00",
+		86399:  "23:59:59",
+		359999: "99:59:59",
+	}
 
 	//when && then
-	for i, r := range inputSeconds {
-		result := convertToHumanReadable(r)
-		if result != expectedResults[i] {
-			t.Errorf("should be %s, is %s", expectedResults[i], result )
+	for k := range testCases {
+		result := convertToHumanReadable(k)
+		if result != testCases[k] {
+			t.Errorf("should be %s, is %s", testCases[k], result)
 		}
 	}
 }
