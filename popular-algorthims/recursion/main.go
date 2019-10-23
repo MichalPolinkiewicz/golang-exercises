@@ -55,3 +55,10 @@ func reverse(s string) string {
 	}
 	return reverse(s[1:]) + s[0:1]
 }
+
+func fib(i int) int {
+	if i <= 1 {
+		return 1
+	}
+	return fib(i-1) + fib(i-2)
+}
