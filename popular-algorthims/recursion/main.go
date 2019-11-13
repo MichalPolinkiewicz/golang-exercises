@@ -32,5 +32,33 @@ func comma2(s string) string {
 		return s
 	}
 	return s[:3] + "," + comma2(s[3:])
+}
 
+func factorial(i int) int{
+	if i == 1 {
+		return 1
+	}
+	return i * factorial(i - 1)
+}
+
+func sum(i int) int {
+	if i == 1 {
+		return 1
+	}
+	return i + sum(i-1)
+}
+
+func reverse(s string) string {
+	l := len(s)
+	if l == 1 {
+		return s
+	}
+	return reverse(s[1:]) + s[0:1]
+}
+
+func fib(i int) int {
+	if i <= 1 {
+		return 1
+	}
+	return fib(i-1) + fib(i-2)
 }
