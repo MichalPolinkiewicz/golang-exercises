@@ -21,12 +21,10 @@ func main() {
 func calc(arr [][]int32) int32 {
 	var results []int32
 	var sum int32 = 0
-
 	for i:= 0; i+2 < len(arr); i++ {
 			arr1 := arr[i]
 			arr2 := arr[i+1]
 			arr3 := arr[i+2]
-
 			for j:= 0; j+2 < len(arr[j]); j++ {
 				sum = arr1[j] + arr1[j+1] + arr1[j+2] + arr2[j+1] + arr3[j] + arr3[j+1] + arr3[j+2]
 				results = append(results, sum)
