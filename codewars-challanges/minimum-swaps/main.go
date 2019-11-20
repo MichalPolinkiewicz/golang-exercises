@@ -15,9 +15,7 @@ func minimumSwaps(arr []int32) int32 {
 		expected := i + 1
 		if int(e) != expected {
 			expectedElementId := findExpectedElementIndex(arr[i:], expected) + i
-			v := arr[i]
-			arr[i] = arr[expectedElementId]
-			arr[expectedElementId] = v
+			arr[i], arr[expectedElementId] = arr[expectedElementId], arr[i]
 			counter++
 		}
 	}
