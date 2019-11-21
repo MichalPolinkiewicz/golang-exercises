@@ -57,7 +57,7 @@ func reverse(s string) string {
 }
 
 func fib(i int) int {
-	if i <= 1 {
+	if i <= 2 {
 		return 1
 	}
 	return fib(i-1) + fib(i-2)
